@@ -101,7 +101,9 @@ export default function Game() {
     <main className="p-2 sm:p-6 md:p-8">
       <div className="mx-auto max-w-2xl">
         <div className="rounded-2xl border bg-white p-2 sm:p-4 shadow-sm">
-          <h1 className="text-lg sm:text-xl font-bold">LET&apos;S PLAY</h1>
+          <h1 className={`text-lg sm:text-xl font-bold ${gameOver ? "text-red-600" : allGone ? "text-green-600" : ""}`}>
+            {gameOver ? "GAME OVER" : allGone ? "ALL CLEARED" : "LET'S PLAY"}
+          </h1>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <label className="text-sm font-medium">Số điểm:</label>
@@ -148,8 +150,6 @@ export default function Game() {
           {gameStarted && (
             <div className="mt-4"> next: {nextPoint?.id}</div>
           )}
-          <AllClearedBanner show={allGone} />
-          <GameOverBanner show={gameOver} />
         </div>
       </div>
     </main>
