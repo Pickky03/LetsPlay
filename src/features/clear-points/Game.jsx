@@ -11,6 +11,7 @@ export default function Game() {
   const [autoplay, setAutoplay] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [activePointId, setActivePointId] = useState(null);
+  const [showPoints, setShowPoints] = useState(false);
   const timer = useTimer();
   const { points, markRemoved, finallyDelete, reset } = usePoints(initialPoints);
   const pointsRef = useRef(points);
@@ -35,6 +36,11 @@ export default function Game() {
   }, [allGone, gameOver, timer]);
 
   const handleStart = () => {
+    if (initialPoints <= 0) {
+      alert("Vui lòng nhập số điểm lớn hơn 0");
+      return;
+    }
+    
     timer.reset();
     reset(initialPoints);
     setTimeout(() => {
@@ -43,22 +49,24 @@ export default function Game() {
     setGameStarted(true);
     setGameOver(false);
     setAutoplay(false);
+    setShowPoints(true);
   };
 
   const handleClickPoint = (id) => {
     if (!gameStarted || gameOver || autoplay) return;
-
+  
     const smallerPoints = points.filter((p) => p.id < id && !p.removed);
     if (smallerPoints.length > 0) {
-      setGameOver(true);
+      markRemoved(id);         
+      setGameOver(true);       
       timer.stop();
       return;
     }
-
+  
     if (!timer.running) timer.start();
     markRemoved(id);
   };
-
+  
   const handlePointGone = (id) => {
     finallyDelete(id);
   };
@@ -82,7 +90,7 @@ export default function Game() {
 
       setActivePointId(next.id);
       markRemoved(next.id);
-    }, 500);
+    }, 800);
 
     return () => clearInterval(interval);
   }, [autoplay, gameStarted, gameOver]);
@@ -99,20 +107,20 @@ export default function Game() {
     <main className="p-2 sm:p-6 md:p-8">
       <div className="mx-auto max-w-2xl">
         <div className="rounded-2xl border bg-white p-2 sm:p-4 shadow-sm">
-          <h1 className={`text-lg sm:text-xl font-bold ${gameOver ? "text-red-600" : allGone ? "text-green-600" : ""}`}>
-            {gameOver ? "GAME OVER" : allGone ? "ALL CLEARED" : "LET'S PLAY"}
+          <h1 className={`text-lg sm:text-xl font-bold ${gameOver ? "text-red-600" : (allGone && gameStarted && showPoints) ? "text-green-600" : ""}`}>
+            {gameOver ? "GAME OVER" : (allGone && gameStarted && showPoints) ? "ALL CLEARED" : "LET'S PLAY"}
           </h1>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <label className="text-sm font-medium">Số điểm:</label>
             <input
               type="number"
-              min="1"
+              min="0"
               max="50"
               value={initialPoints}
               onChange={(e) => {
                 const value = Number(e.target.value);
-                if (value >= 1) setInitialPoints(value);
+                if (value >= 0) setInitialPoints(value);
               }}
               className="w-16 border px-2 py-1 text-sm rounded"
               disabled={gameStarted}
@@ -137,7 +145,7 @@ export default function Game() {
 
           <div className="mt-4">
             <Board
-              points={points}
+              points={showPoints ? points : []}
               onClickPoint={handleClickPoint}
               onPointGone={handlePointGone}
               gameOver={gameOver}
