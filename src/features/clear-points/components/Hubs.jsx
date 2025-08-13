@@ -1,7 +1,7 @@
 import React from "react";
 import { formatMs } from "../../../lib/format";
 
-export default function Hubs({ remaining, elapsedMs, onRestart }) {
+export default function Hubs({ remaining, elapsedMs, onStart, gameStarted }) {
   return (
     <div className="flex flex-row sm:flex-col items-center sm:items-start justify-between sm:justify-start gap-2 sm:gap-3">
       <div className="flex flex-col sm:space-y-1">
@@ -14,10 +14,10 @@ export default function Hubs({ remaining, elapsedMs, onRestart }) {
       </div>
       
       <button
-        className="border px-3 py-1.5 text-xs font-medium  hover:bg-slate-50 active:bg-slate-100"
-        onClick={onRestart}
+        className="border px-3 py-1.5 text-xs font-medium hover:bg-slate-50 active:bg-slate-100"
+        onClick={onStart}
       >
-        Restart
+        {gameStarted ? "Restart" : "Start"}
       </button>
     </div>
   );

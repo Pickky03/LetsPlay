@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { generatePoints } from "../lib/geometry";
-import { POINT_RADIUS, BOARD_SIZE } from "../constants/constants";
+import {
+  POINT_RADIUS,
+  BOARD_SIZE,
+  DEFAULT_POINTS,
+} from "../constants/constants";
 
-export function usePoints(initialCount) {
+export function usePoints(initialCount = DEFAULT_POINTS) {
   const [count, setCount] = useState(initialCount);
   const [points, setPoints] = useState(() =>
     generatePoints(count, POINT_RADIUS, BOARD_SIZE).map((p) => ({

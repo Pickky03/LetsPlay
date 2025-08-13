@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { BOARD_SIZE, BOARD_SIZE_SM, BOARD_SIZE_XS } from "../../../constants/constants";
 import PointBubble from "./PointBubble";
 
-export default function Board({ points, onClickPoint, onPointGone }) {
+export default function Board({ points, onClickPoint, onPointGone, gameOver, autoplay, activePointId }) {
   const [boardSize, setBoardSize] = useState(BOARD_SIZE);
 
   useEffect(() => {
@@ -49,7 +49,11 @@ export default function Board({ points, onClickPoint, onPointGone }) {
               r={scaledR}
               removed={p.removed}
               onClick={() => onClickPoint(p.id)}
+              disabled={gameOver}
               onGone={() => onPointGone(p.id)}
+              gameOver={gameOver}
+              autoplay={autoplay}
+              isActive={autoplay && activePointId === p.id}
             />
           );
         })}
