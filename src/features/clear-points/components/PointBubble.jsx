@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { REMOVE_ANIM_DURATION, POINT_COUNTDOWN_DURATION } from "../../../constants/constants";
 
 export default function PointBubble({
@@ -15,62 +15,62 @@ export default function PointBubble({
   isActive,
 }) {
   const [countdown, setCountdown] = useState(null);
-  const [intervalId, setIntervalId] = useState(null);
-  
-  // Reset countdown khi component được tạo mới (restart) hoặc khi prop removed thay đổi từ true về false
+  const rafId = useRef(null);
+  const startTime = useRef(null);
+  const calledGone = useRef(false);
+
+  // Reset lại khi id hoặc removed false (hồi sinh điểm)
   useEffect(() => {
     setCountdown(null);
-    if (intervalId) {
-      clearInterval(intervalId);
-      setIntervalId(null);
-    }
-  }, [id]);
-  
-  // Đảm bảo reset countdown khi removed chuyển từ true về false (khi restart)
+    startTime.current = null;
+    cancelAnimationFrame(rafId.current);
+    calledGone.current = false;
+  }, [id, removed]);
+
+  // Bắt đầu countdown khi removed === true
   useEffect(() => {
-    if (!removed && countdown !== null) {
-      setCountdown(null);
-      if (intervalId) {
-        clearInterval(intervalId);
-        setIntervalId(null);
+    if (!removed || gameOver) return;
+
+    startTime.current = performance.now();
+
+    const update = (now) => {
+      const elapsed = now - startTime.current;
+      const remain = Math.max(0, POINT_COUNTDOWN_DURATION - elapsed);
+      const remainSec = remain / 1000;
+
+      setCountdown(remainSec);
+
+      if (remain <= 0 && !calledGone.current) {
+        calledGone.current = true;
+        if (typeof onGone === "function") onGone();
+        return; // stop loop
       }
-    }
-  }, [removed]);
-  
-  // Dừng countdown khi game over
-  useEffect(() => {
-    if (gameOver && intervalId) {
-      clearInterval(intervalId);
-    }
-  }, [gameOver, intervalId]);
-  
-  useEffect(() => {
-    if (removed) {
-      // Bắt đầu đếm ngược 3s khi điểm được nhấn
-      setCountdown(3.0);
-      
-      const interval = setInterval(() => {
-        setCountdown(prev => {
-          if (prev <= 0.1) {
-            clearInterval(interval);
-            return 0;
-          }
-          return +(prev - 0.1).toFixed(1);
-        });
-      }, 100);
-      
-      setIntervalId(interval);
-      return () => clearInterval(interval);
-    }
-  }, [removed]);
+
+      rafId.current = requestAnimationFrame(update);
+    };
+
+    rafId.current = requestAnimationFrame(update);
+
+    return () => {
+      cancelAnimationFrame(rafId.current);
+    };
+  }, [removed, gameOver]);
+
+  const opacity =
+    removed && countdown !== null
+      ? Math.max(0, Math.min(1, (countdown * 1000) / POINT_COUNTDOWN_DURATION))
+      : 1;
+
+  const shouldShrink = removed && countdown !== null && countdown <= 0;
 
   const style = {
     left: x - r,
     top: y - r,
     width: r * 2,
     height: r * 2,
-    // Khi là điểm đang active trong chế độ autoplay, hiển thị phía trên các điểm khác
-    zIndex: isActive ? 100 : 1,
+    zIndex: removed ? 100 : 1,
+    opacity,
+    transition: `transform ${REMOVE_ANIM_DURATION}ms linear`,
   };
 
   return (
@@ -78,27 +78,21 @@ export default function PointBubble({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      onTransitionEnd={(e) => {
-        // đảm bảo transition opacity/transform kết thúc của chính phần tử
-        if (e.target === e.currentTarget && removed && countdown <= 0) {
-          // chờ đúng bằng thời lượng để chắc chắn
-          setTimeout(onGone, 0);
-        }
-      }}
       className={[
         "absolute grid place-items-center select-none",
         "rounded-full border text-sm font-semibold",
-        "transition",
-        `duration-[${REMOVE_ANIM_DURATION}ms]`,
-        removed ? "opacity-50 bg-red-100 text-red-600" : "opacity-100 scale-100 bg-white",
-        countdown === 0 ? "opacity-0 scale-90" : "",
+        removed ? "bg-red-100 text-red-600" : "bg-white",
+        shouldShrink ? "scale-90" : "scale-100",
+        "will-change-[opacity,transform]",
       ].join(" ")}
       style={style}
     >
       <div className="flex flex-col items-center">
         <span>{id}</span>
         {countdown !== null && countdown > 0 && (
-          <span className={`text-xs ${removed ? "text-red-600" : "text-blue-600"}`}>{countdown.toFixed(1)}s</span>
+          <span className={`text-xs ${removed ? "text-red-600" : "text-blue-600"}`}>
+            {(Math.ceil(countdown * 10) / 10).toFixed(1)}s
+          </span>
         )}
       </div>
     </button>

@@ -16,15 +16,20 @@ export default function Game() {
   const timer = useTimer();
   const { points, markRemoved, finallyDelete, reset } = usePoints(initialPoints);
   const pointsRef = useRef(points);
+  const nextPoint = points
+  .filter((p) => !p.removed)
+  .sort((a, b) => a.id - b.id)[0];
+
+
   const remaining = points.filter((p) => !p.removed).length;
   const allGone = points.length === 0;
+
   useEffect(() => {
     pointsRef.current = points;
   }, [points]);
 
   useEffect(() => {
     timer.reset();
-    // Không tự động bắt đầu khi mới vào trang
   }, []);
 
   useEffect(() => {
@@ -32,11 +37,8 @@ export default function Game() {
   }, [allGone, gameOver, timer]);
 
   const handleStart = () => {
-    // Đảm bảo timer được reset hoàn toàn trước khi bắt đầu lại
     timer.reset();
-    // Đảm bảo các điểm được reset
     reset(initialPoints);
-    // Bắt đầu timer
     setTimeout(() => {
       timer.start();
     }, 0);
@@ -46,22 +48,15 @@ export default function Game() {
   };
 
   const handleClickPoint = (id) => {
-    if (!gameStarted) return;
-    if (gameOver) return;
-    // Nếu đang ở chế độ autoplay, không cho phép người dùng bấm
-    if (autoplay) return;
-    
-    // Kiểm tra nếu người dùng bấm đúng thứ tự (từ nhỏ đến lớn)
-    const currentPoint = points.find(p => p.id === id);
-    const smallerPoints = points.filter(p => p.id < id && !p.removed);
-    
+    if (!gameStarted || gameOver || autoplay) return;
+
+    const smallerPoints = points.filter((p) => p.id < id && !p.removed);
     if (smallerPoints.length > 0) {
-      // Nếu còn số nhỏ hơn chưa bấm, game over
       setGameOver(true);
       timer.stop();
       return;
     }
-    
+
     if (!timer.running) timer.start();
     markRemoved(id);
   };
@@ -75,44 +70,31 @@ export default function Game() {
       setActivePointId(null);
       return;
     }
-  
-    let timeoutId;
-  
-    const autoplayNext = () => {
+
+    const interval = setInterval(() => {
       const next = pointsRef.current
-        .filter(p => !p.removed)
+        .filter((p) => !p.removed)
         .sort((a, b) => a.id - b.id)[0];
-  
+
       if (!next) {
+        clearInterval(interval);
         setActivePointId(null);
         return;
       }
-      
-      // Cập nhật activePointId trước khi đánh dấu removed
+
       setActivePointId(next.id);
       markRemoved(next.id);
-      timeoutId = setTimeout(autoplayNext, 500);
-    };
-  
-    timeoutId = setTimeout(autoplayNext, 500);
-    return () => {
-      clearTimeout(timeoutId);
-      setActivePointId(null);
-    };
+    }, 500);
+
+    return () => clearInterval(interval);
   }, [autoplay, gameStarted, gameOver]);
-  
 
   const toggleAutoplay = () => {
-    const newAutoplayState = !autoplay;
-    setAutoplay(newAutoplayState);
-    
-    // Đảm bảo timer bắt đầu chạy ngay khi bật autoplay
-    if (newAutoplayState && gameStarted && !timer.running) {
+    const newState = !autoplay;
+    setAutoplay(newState);
+    if (newState && gameStarted && !timer.running) {
       timer.start();
     }
-    
-    // Hiển thị nút với văn bản phù hợp
-    const buttonText = newAutoplayState ? "OFF" : "ON";
   };
 
   return (
@@ -121,7 +103,7 @@ export default function Game() {
         <div className="rounded-2xl border bg-white p-2 sm:p-4 shadow-sm">
           <h1 className="text-lg sm:text-xl font-bold">LET&apos;S PLAY</h1>
 
-          <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <label className="text-sm font-medium">Số điểm:</label>
             <input
               type="number"
@@ -130,11 +112,9 @@ export default function Game() {
               value={initialPoints}
               onChange={(e) => {
                 const value = Number(e.target.value);
-                if (value >= 1) {
-                  setInitialPoints(value);
-                }
+                if (value >= 1) setInitialPoints(value);
               }}
-              className="w-16 sm:w-20 border px-2 py-1 text-sm rounded"
+              className="w-16 border px-2 py-1 text-sm rounded"
               disabled={gameStarted}
             />
             {gameStarted && (
@@ -144,27 +124,18 @@ export default function Game() {
             )}
           </div>
 
-          <div className="mt-3 sm:mt-4 flex justify-between">
+          <div className="mt-3">
             <Hubs
               remaining={remaining}
               elapsedMs={timer.elapsedMs}
               onStart={handleStart}
               gameStarted={gameStarted}
+              autoplay={autoplay}
+              onToggleAutoplay={toggleAutoplay}
             />
-            
-            {gameStarted && (
-              <button
-                className={`border px-3 py-1.5 text-xs font-medium hover:bg-slate-50 active:bg-slate-100 ${
-                  autoplay ? "bg-blue-100 text-blue-700" : ""
-                }`}
-                onClick={toggleAutoplay}
-              >
-                Autoplay {autoplay ? "OFF" : "ON"}
-              </button>
-            )}
           </div>
 
-          <div className="mt-4 sm:mt-6">
+          <div className="mt-4">
             <Board
               points={points}
               onClickPoint={handleClickPoint}
@@ -174,7 +145,9 @@ export default function Game() {
               activePointId={activePointId}
             />
           </div>
-
+          {gameStarted && (
+            <div className="mt-4"> next: {nextPoint?.id}</div>
+          )}
           <AllClearedBanner show={allGone} />
           <GameOverBanner show={gameOver} />
         </div>
