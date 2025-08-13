@@ -3,8 +3,6 @@ import { useTimer } from "../../hooks/useTimer";
 import { usePoints } from "../../hooks/usePoints";
 import Hubs from "./components/Hubs";
 import Board from "./components/Board";
-import AllClearedBanner from "./components/AllClearedBanner";
-import GameOverBanner from "./components/GameOverBanner";
 import { DEFAULT_POINTS } from "../../constants/constants";
 
 export default function Game() {
